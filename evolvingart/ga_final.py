@@ -23,6 +23,9 @@ os.makedirs("results/final_ga/progress", exist_ok=True)
 snap = set(np.unique(np.logspace(0, np.log10(GENERATIONS), 60).astype(int)))
 milestones_left = [m for m in MILESTONES if m < EVALS]
 
+frames = []
+panels = []
+
 
 def to_frame(ind):
     img = core.render(ind).clip(0, 255).astype(np.uint8)
@@ -37,34 +40,7 @@ def labeled(img, text):
     return out
 
 
-scored = []
-for _ in range(POP_SIZE):
-    ind = core.random_individual()
-    scored.append((ind, core.fitness(ind)))
-evals = POP_SIZE
-
-history = []
-frames = []
-panels = []
-
-target = cv2.resize(core.TARGET.clip(0, 255).astype(np.uint8), (640, 360),
-                    interpolation=cv2.INTER_LINEAR)
-panels.append(labeled(target, "Target"))
-
-for g in range(1, GENERATIONS + 1):
-    scored.sort(key=lambda s: s[1])
-    new = scored[:ELITE]
-    while len(new) < POP_SIZE:
-        p1 = ga.tournament(scored)
-        p2 = ga.tournament(scored)
-        child = core.mutate(ga.crossover(p1, p2))
-        new.append((child, core.fitness(child)))
-        evals += 1
-    scored = new
-
-    best_ind, best_fit = min(scored, key=lambda s: s[1])
-    history.append((evals, best_fit))
-
+def on_generation(g, evals, best_ind, best_fit):
     if g in snap:
         frames.append(to_frame(best_ind))
 
@@ -77,6 +53,16 @@ for g in range(1, GENERATIONS + 1):
 
     if g % 500 == 0:
         print(f"gen {g:6d}  evals {evals:7d}  error {best_fit:.1f}")
+
+
+target = cv2.resize(core.TARGET.clip(0, 255).astype(np.uint8), (640, 360),
+                    interpolation=cv2.INTER_LINEAR)
+panels.append(labeled(target, "Target"))
+
+best_ind, history = ga.run_ga(pop_size=POP_SIZE, generations=GENERATIONS,
+                              elite=ELITE, save_every=10**9,
+                              callback=on_generation)
+best_fit = history[-1][1]
 
 final_frame = to_frame(best_ind)
 final_frame.save("results/final_ga/progress/ga_final.png")
