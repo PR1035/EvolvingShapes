@@ -22,7 +22,7 @@ def tournament(scored, k=3):
     return min(contestants, key=lambda s: s[1])[0]
 
 
-def run_ga(pop_size=40, generations=500, elite=2, save_every=50):
+def run_ga(pop_size=40, generations=500, elite=2, save_every=50, callback=None):
     scored = []
     for _ in range(pop_size):
         ind = core.random_individual()
@@ -42,6 +42,9 @@ def run_ga(pop_size=40, generations=500, elite=2, save_every=50):
         scored = new
         best_ind, best_fit = min(scored, key=lambda s: s[1])
         history.append((evals, best_fit))
+
+        if callback is not None:
+            callback(g, evals, best_ind, best_fit)
 
         if g % save_every == 0:
             cv2.imwrite(f"results/ga_{g:05d}.png", core.render(best_ind))
